@@ -1,0 +1,68 @@
+library(ggplot2)
+
+set.seed(8)
+
+y0 <- 10
+B <- c(0.038, 0.027, 0.042, 0.031, 0.048, 0.027, 0.032, 0.035,
+            0.034, 0.03, 0.02, 0.023, 0.018, 0.036, 0.032, 0.037,
+            0.033, 0.031, 0.02, 0.039)
+C <- 1000
+M <- 10
+
+min.B <- 0.01
+max.B <- 0.05
+
+B <- sort(B)
+
+getecdf<-function(x){
+  i<-seq(1,length(x),1)
+  cdf.rawdata<-i/(length(x)+1)
+  cdf.rawdata
+}
+
+cdf.B<-getecdf(B)
+plot(B, cdf.B, type="l") 
+
+rcumul<- function(n,x,p,min,max){
+  y<-c()
+  U<-runif(n,0,1)
+  for(j in 1:n){
+    i<-1;
+    while((p[i]<=U[j])&(i<=length(x))){i<-i+1}
+    if(i==1) y[j]<-(U[j]*(x[i]-min))/p[i]+min
+    else if(i>length(x)) y[j]<-((U[j]-p[i-1])*
+                                  (max-x[i-1]))/(1-p[i-1])+x[i-1]
+    else y[j]<-((U[j]-p[i-1])*(x[i]-x[i-1]))/
+        (p[i]-p[i-1])+x[i-1]}
+  y
+}
+
+rB<-rcumul(n=5000,x=B, p=cdf.B,
+                 min=min.B, max=max.B) 
+
+yt <- function(t){
+  y <- y0 + C*exp(-exp(-rB*(t-M)))
+  print(y)
+}
+
+y5 <- yt(5)
+
+length(y5)
+summary(y5)
+quantile(y5, seq(0,1,0.025))
+
+df <- data.frame(y5)
+
+ggplot(df, aes(y5)) + stat_ecdf(geom = "step") +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    geom_hline(yintercept=0, linetype="dashed") +
+    geom_hline(yintercept=1, linetype="dashed") +
+    labs(title = "ECDF of 5000 iterations", x = "Simulated Population Size after 5 Years", y = "Fn(x)") 
+
+ggplot(df, aes(y5)) + 
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_histogram(aes(y=..density..), colour="black", fill="grey", binwidth=3)+
+  geom_density(alpha=.2, fill="#FF6666") +
+  labs(title = "Histogram and Density of 5000 iterations", x = "Simulated Population Size after 5 Years", y = "Density")
